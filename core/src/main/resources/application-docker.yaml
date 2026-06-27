@@ -1,0 +1,22 @@
+rate-limit:
+  store: redis
+  failure-mode: closed
+  redis:
+    host: redis
+    port: 6379
+    timeout-millis: 50
+  rules:
+    - name: user-limit
+      scope: USER
+      algorithm: sliding-counter
+      maxRequests: 10
+      windowMillis: 60000
+
+    - name: global-limit
+      scope: GLOBAL
+      algorithm: token
+      capacity: 100
+      refillPerSecond: 10
+
+server:
+  port: 8080
