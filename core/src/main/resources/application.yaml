@@ -27,11 +27,14 @@ rate-limit:
       windowMillis: 10000
 
 spring:
+  profiles:
+    active:
+    - docker
   data:
     redis:
       host: ${rate-limit.redis.host}
       port: ${rate-limit.redis.port}
-      timeout: ${rate-limit.redis.timeoutMillis}ms
+      timeout: ${rate-limit.redis.timeout-millis}ms
 
 management:
   endpoints:
