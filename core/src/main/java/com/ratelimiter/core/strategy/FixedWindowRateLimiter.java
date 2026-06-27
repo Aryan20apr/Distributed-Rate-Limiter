@@ -32,10 +32,11 @@ public class FixedWindowRateLimiter extends AbstractRateLimiter {
     @Override
     public RateLimitResult allow(String key) {
 
+        long limit = maxRequests;
         long now = System.nanoTime();
 
         if (isKeyLimitExceeded(key)) {
-            return new RateLimitResult(false, 0, 0);
+            return new RateLimitResult(false, 0, 0, limit, (System.currentTimeMillis() / 1000) + 60);
         }
 
         WindowState state = (WindowState) store.computeIfAbsent(key, k -> {
@@ -55,19 +56,20 @@ public class FixedWindowRateLimiter extends AbstractRateLimiter {
             if (elapsed >= windowSizeNanos) {
                 state.windowStart = now;
                 state.counter.reset();
+                elapsed = 0;
             }
 
             state.counter.increment();
             long count = state.counter.sum();
 
+            long retryMillis = (windowSizeNanos - elapsed) / 1_000_000;
+            long resetAt = (System.currentTimeMillis() + retryMillis) / 1000;
+
             if (count <= maxRequests) {
-                return new RateLimitResult(true,
-                        maxRequests - count,
-                        0);
+                return new RateLimitResult(true, maxRequests - count, 0, limit, resetAt);
             }
 
-            long retry = (windowSizeNanos - elapsed) / 1_000_000;
-            return new RateLimitResult(false, 0, retry);
+            return new RateLimitResult(false, 0, retryMillis, limit, resetAt);
         }
     }
 }

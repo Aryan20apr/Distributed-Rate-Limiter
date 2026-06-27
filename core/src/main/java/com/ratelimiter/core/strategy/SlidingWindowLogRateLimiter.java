@@ -36,8 +36,11 @@ public class SlidingWindowLogRateLimiter extends AbstractRateLimiter {
     @Override
     public RateLimitResult allow(String key) {
 
+        long limit = maxRequests;
+
         if (isKeyLimitExceeded(key)) {
-            return new RateLimitResult(false, 0, 0);
+            long resetAt = (System.currentTimeMillis() / 1000) + 60;
+            return new RateLimitResult(false, 0, 0, limit, resetAt);
         }
 
         long now = System.nanoTime();
@@ -66,20 +69,21 @@ public class SlidingWindowLogRateLimiter extends AbstractRateLimiter {
             }
 
             if (deque.size() >= hardCap) {
-                return new RateLimitResult(false, 0, 0);
+                long resetAt = (System.currentTimeMillis() / 1000) + 60;
+                return new RateLimitResult(false, 0, 0, limit, resetAt);
             }
 
             if (deque.size() < maxRequests) {
                 deque.addLast(now);
-                return new RateLimitResult(true,
-                        maxRequests - deque.size(),
-                        0);
+                long resetAt = (System.currentTimeMillis() / 1000) + 60;
+                return new RateLimitResult(true, maxRequests - deque.size(), 0, limit, resetAt);
             }
 
             long oldest = deque.peekFirst();
             long retryMillis = (windowNanos - (now - oldest)) / 1_000_000;
+            long resetAt = (System.currentTimeMillis() + retryMillis) / 1000;
 
-            return new RateLimitResult(false, 0, retryMillis);
+            return new RateLimitResult(false, 0, retryMillis, limit, resetAt);
         }
     }
 }

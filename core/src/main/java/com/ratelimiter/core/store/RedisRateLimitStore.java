@@ -47,7 +47,7 @@ public RateLimitResult allow(String scopeKey, RateLimitRule rule) {
         throw ex;
     } catch (RuntimeException ex) {
         if (failureMode == RateLimitProperties.FailureMode.OPEN) {
-            return new RateLimitResult(true, Long.MAX_VALUE, 0);
+            return RateLimitResult.of(true, Long.MAX_VALUE, 0);
         }
         throw new RateLimitStoreException("Redis rate limit check failed", ex);
     }
@@ -87,12 +87,12 @@ private RateLimitResult toRateLimitResult(List<Long> result) {
     boolean allowed = result.get(0) == 1L;
     long remaining = result.get(1);
     long retryAfterMillis = result.get(2);
-    return new RateLimitResult(allowed, remaining, retryAfterMillis);
+    return RateLimitResult.of(allowed, remaining, retryAfterMillis);
 }
 
 private RateLimitResult handleRedisFailure(RedisConnectionFailureException ex) {
     if (failureMode == RateLimitProperties.FailureMode.OPEN) {
-        return new RateLimitResult(true, Long.MAX_VALUE, 0);
+        return RateLimitResult.of(true, Long.MAX_VALUE, 0);
     }
     throw new RateLimitStoreException("Redis is unavailable", ex);
 }

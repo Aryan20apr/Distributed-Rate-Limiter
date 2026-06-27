@@ -55,13 +55,13 @@ public class RateLimitManager {
                         .increment();
             }
 
-            minRemaining = Math.min(minRemaining, result.remainingTokens());
+            minRemaining = Math.min(minRemaining, result.remaining());
         }
 
         if (minRemaining == Long.MAX_VALUE) {
             minRemaining = 0;
         }
 
-        return new RateLimitResult(allowed, minRemaining, maxRetry);
+        return RateLimitResult.of(allowed, minRemaining, maxRetry);
     }
 }

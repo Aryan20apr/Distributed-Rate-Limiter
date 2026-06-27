@@ -43,7 +43,7 @@ public class RateLimitFilter implements Filter {
             }
 
             httpRes.setHeader("X-RateLimit-Remaining",
-                    String.valueOf(result.remainingTokens()));
+                    String.valueOf(result.remaining()));
 
             chain.doFilter(request, response);
         } catch (RateLimitStoreException ex) {
