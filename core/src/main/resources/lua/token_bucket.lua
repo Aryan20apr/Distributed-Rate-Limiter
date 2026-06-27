@@ -7,9 +7,9 @@
 -- Returns: { allowed (0|1), remaining (int), retry_after_ms (int) }
 
 local key = KEYS[1]
-local capacity = toNumber(ARGV[1])
-local refill_rate = toNumber(ARGV[2])
-local requested = toNumber(ARGV[3])
+local capacity = tonumber(ARGV[1])
+local refill_rate = tonumber(ARGV[2])
+local requested = tonumber(ARGV[3])
 local ttl = tonumber(ARGV[4])
 
 local time_parts = redis.call('TIME')

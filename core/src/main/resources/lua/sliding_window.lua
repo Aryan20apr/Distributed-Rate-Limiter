@@ -8,8 +8,8 @@
 
 local key = KEYS[1]
 local max_requests = tonumber(ARGV[1])
-local window_mills = toNumber(ARGV[2])
-local ttl = toNumber(ARGV[3])
+local window_millis = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
 
 local time_parts = redis.call('TIME')
 local now_ms = tonumber(time_parts[1]) * 1000 + math.floor(tonumber(time_parts[2]) / 1000)

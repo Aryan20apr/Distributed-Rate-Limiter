@@ -52,7 +52,7 @@ public class RedisConfig {
     @Bean
     RedisScript<List<Long>> slidingWindowCounterScript() {
         DefaultRedisScript<List<Long>> script = new DefaultRedisScript<>();
-        script.setLocation(new ClassPathResource("lua/sliding_window_counter.lua"));
+        script.setLocation(new ClassPathResource("lua/sliding_window.lua"));
         script.setResultType(listLongType());
         return script;
     }
