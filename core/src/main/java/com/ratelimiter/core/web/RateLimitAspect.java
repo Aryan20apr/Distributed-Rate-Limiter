@@ -9,6 +9,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.ratelimiter.core.dtos.RateLimitDecision;
 import com.ratelimiter.core.service.RateLimitManager;
+import com.ratelimiter.core.utils.RateLimitExceededException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -33,7 +34,7 @@ public class RateLimitAspect {
         RateLimitDecision result = manager.evaluate(request);
 
         if (!result.allowed()) {
-            throw new RuntimeException("Rate limit exceeded");
+            throw new RateLimitExceededException(result);
         }
 
         return joinPoint.proceed();
