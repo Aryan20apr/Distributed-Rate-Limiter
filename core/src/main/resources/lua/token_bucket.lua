@@ -44,4 +44,8 @@ end
 redis.call('HSET', key, 'tokens', tokens, 'last_refill', now_ms)
 redis.call('EXPIRE', key, ttl)
 
-return { allowed, math.floor(tokens), retry_after_ms }
+local reset_at_epoch = math.floor((now_ms + retry_after_ms) / 1000)
+if allowed == 1 and retry_after_ms == 0 then
+    reset_at_epoch = math.floor(now_ms / 1000) + ttl
+end
+return { allowed, math.floor(tokens), retry_after_ms, reset_at_epoch }

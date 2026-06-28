@@ -62,4 +62,5 @@ redis.call('HSET', key,
     'window_start', window_start)
 redis.call('EXPIRE', key, ttl)
 
-return { allowed, remaining, retry_after_ms }
+local reset_at_epoch = math.floor((now_ms + retry_after_ms) / 1000)
+return { allowed, remaining, retry_after_ms, reset_at_epoch }
