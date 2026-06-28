@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ratelimiter.core.dtos.RateLimitRule;
 import com.ratelimiter.core.service.RateLimitManager;
 import com.ratelimiter.core.store.InMemoryRateLimitStore;
@@ -81,6 +82,10 @@ public class RateLimiterConfig {
                         + "Use 'token' or 'sliding-counter'.");
             }
         }
-    }
 
+    }
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
+    }
 }
