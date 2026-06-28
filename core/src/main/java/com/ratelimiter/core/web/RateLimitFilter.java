@@ -2,7 +2,7 @@ package com.ratelimiter.core.web;
 
 import java.io.IOException;
 
-import com.ratelimiter.core.dtos.RateLimitResult;
+import com.ratelimiter.core.dtos.RateLimitDecision;
 import com.ratelimiter.core.service.RateLimitManager;
 import com.ratelimiter.core.store.RateLimitStoreException;
 
@@ -32,7 +32,7 @@ public class RateLimitFilter implements Filter {
         var httpRes = (HttpServletResponse) response;
 
         try {
-            RateLimitResult result = manager.evaluate(httpReq);
+            RateLimitDecision result = manager.evaluate(httpReq);
 
             if (!result.allowed()) {
                 httpRes.setStatus(429);

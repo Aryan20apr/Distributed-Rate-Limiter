@@ -7,8 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import com.ratelimiter.core.config.RateLimited;
-import com.ratelimiter.core.dtos.RateLimitResult;
+import com.ratelimiter.core.dtos.RateLimitDecision;
 import com.ratelimiter.core.service.RateLimitManager;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,7 +30,7 @@ public class RateLimitAspect {
                         RequestContextHolder.getRequestAttributes())
                         .getRequest();
 
-        RateLimitResult result = manager.evaluate(request);
+        RateLimitDecision result = manager.evaluate(request);
 
         if (!result.allowed()) {
             throw new RuntimeException("Rate limit exceeded");

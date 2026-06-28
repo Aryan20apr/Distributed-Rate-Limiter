@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.script.RedisScript;
 import com.ratelimiter.core.config.RateLimitProperties;
 import com.ratelimiter.core.dtos.RateLimitResult;
 import com.ratelimiter.core.dtos.RateLimitRule;
+import com.ratelimiter.core.utils.RuleLimitResolver;
 
 public class RedisRateLimitStore implements RateLimitStore {
     
@@ -40,7 +41,7 @@ public RateLimitResult allow(String scopeKey, RateLimitRule rule) {
             default -> throw new IllegalArgumentException(
                     "Algorithm not supported in Redis store: " + rule.getAlgorithm());
         };
-        return toRateLimitResult(result);
+        return toRateLimitResult(result, rule);
     } catch (RedisConnectionFailureException ex) {
         return handleRedisFailure(ex);
     } catch (RateLimitStoreException ex) {
@@ -79,15 +80,18 @@ private List<Long> executeSlidingWindow(String redisKey, RateLimitRule rule) {
             String.valueOf(ttlSeconds));
 }
 
-private RateLimitResult toRateLimitResult(List<Long> result) {
+private RateLimitResult toRateLimitResult(List<Long> result, RateLimitRule rule) {
     if (result == null || result.size() < 3) {
-        throw new RateLimitStoreException(
-                "Unexpected Lua script result: " + result, null);
+        throw new RateLimitStoreException("Unexpected Lua script result: " + result, null);
     }
     boolean allowed = result.get(0) == 1L;
     long remaining = result.get(1);
     long retryAfterMillis = result.get(2);
-    return RateLimitResult.of(allowed, remaining, retryAfterMillis);
+    long limit = RuleLimitResolver.resolveLimit(rule);
+    long resetAt = retryAfterMillis > 0
+            ? (System.currentTimeMillis() + retryAfterMillis) / 1000
+            : (System.currentTimeMillis() / 1000) + (rule.getWindowMillis() / 1000);
+  return new RateLimitResult(allowed, remaining, retryAfterMillis, limit, resetAt);
 }
 
 private RateLimitResult handleRedisFailure(RedisConnectionFailureException ex) {
