@@ -12,6 +12,19 @@ rate-limit:
       maxRequests: 10
       windowMillis: 60000
 
+    - name: ip-limit
+      scope: IP
+      algorithm: sliding-counter
+      maxRequests: 30
+      windowMillis: 60000
+
+    - name: api-key-limit
+      scope: API_KEY
+      algorithm: token
+      capacity: 50
+      refillPerSecond: 1.0
+      endpointPattern: /api/**
+
     - name: global-limit
       scope: GLOBAL
       algorithm: token
