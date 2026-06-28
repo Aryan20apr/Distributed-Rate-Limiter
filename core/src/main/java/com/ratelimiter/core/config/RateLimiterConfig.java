@@ -17,6 +17,7 @@ import com.ratelimiter.core.store.RateLimitStore;
 import com.ratelimiter.core.store.RateLimiterFactory;
 import com.ratelimiter.core.store.RedisRateLimitStore;
 import com.ratelimiter.core.web.RateLimitFilter;
+import com.ratelimiter.core.web.RateLimitResponseWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -31,10 +32,13 @@ public class RateLimiterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<RateLimitFilter> rateLimitFilter(RateLimitManager manager) {
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilter(
+            RateLimitManager manager,
+            RateLimitResponseWriter responseWriter) {
         FilterRegistrationBean<RateLimitFilter> bean = new FilterRegistrationBean<>();
-        bean.setFilter(new RateLimitFilter(manager));
+        bean.setFilter(new RateLimitFilter(manager, responseWriter));
         bean.addUrlPatterns("/*");
+        bean.setOrder(1);
         return bean;
     }
 
@@ -45,7 +49,7 @@ public class RateLimiterConfig {
         return new InMemoryRateLimitStore(properties.getRules());
     }
 
-	@Bean
+    @Bean
     @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
     RateLimitStore redisRateLimitStore(
             StringRedisTemplate redisTemplate,
@@ -60,7 +64,7 @@ public class RateLimiterConfig {
                 properties);
     }
 
-	private static void validateRules(RateLimitProperties properties) {
+    private static void validateRules(RateLimitProperties properties) {
         if (properties.getRules() == null || properties.getRules().isEmpty()) {
             throw new IllegalStateException("rate-limit.rules must not be empty");
         }
@@ -72,9 +76,9 @@ public class RateLimiterConfig {
             if (!RateLimiterFactory.isRedisSupported(rule.getAlgorithm())) {
                 throw new IllegalStateException(
                         "Rule '" + rule.getName() + "' uses algorithm '"
-                                + rule.getAlgorithm()
-                                + "' which is not supported with rate-limit.store=redis. "
-                                + "Use 'token' or 'sliding-counter'.");
+                        + rule.getAlgorithm()
+                        + "' which is not supported with rate-limit.store=redis. "
+                        + "Use 'token' or 'sliding-counter'.");
             }
         }
     }

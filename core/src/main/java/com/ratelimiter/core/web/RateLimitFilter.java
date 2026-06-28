@@ -17,9 +17,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class RateLimitFilter implements Filter {
 
     private final RateLimitManager manager;
+    private final RateLimitResponseWriter responseWriter;
 
-    public RateLimitFilter(RateLimitManager manager) {
+    public RateLimitFilter(RateLimitManager manager, RateLimitResponseWriter responseWriter) {
         this.manager = manager;
+        this.responseWriter = responseWriter;
     }
 
     @Override
@@ -32,23 +34,17 @@ public class RateLimitFilter implements Filter {
         var httpRes = (HttpServletResponse) response;
 
         try {
-            RateLimitDecision result = manager.evaluate(httpReq);
+            RateLimitDecision decision = manager.evaluate(httpReq);
 
-            if (!result.allowed()) {
-                httpRes.setStatus(429);
-                httpRes.setHeader("Retry-After",
-                        String.valueOf(Math.max(1, result.retryAfterMillis() / 1000)));
-                httpRes.getWriter().write("Rate limit exceeded");
+            if (!decision.allowed()) {
+                responseWriter.writeTooManyRequests(httpRes, decision);
                 return;
             }
 
-            httpRes.setHeader("X-RateLimit-Remaining",
-                    String.valueOf(result.remaining()));
-
+            responseWriter.writeAllowedHeaders(httpRes, decision);
             chain.doFilter(request, response);
         } catch (RateLimitStoreException ex) {
-            httpRes.setStatus(503);
-            httpRes.getWriter().write("Rate limiter unavailable");
+            responseWriter.writeServiceUnavailable(httpRes);
         }
     }
 }
