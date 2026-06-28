@@ -15,5 +15,9 @@ public class RateLimitRule {
     private double refillPerSecond;
     private double capacity;
 
-   
+    /** Ant-style pattern, e.g. /api/search, /api/** — null means all endpoints */
+    private String endpointPattern;
+
+    /** Defaults to true when omitted in YAML */
+    private boolean enabled = true;
 }
