@@ -70,6 +70,7 @@ class SlidingWindowCounterLuaScriptTest {
         RateLimitResult denied = store.allow("user:demo-user", rule);
         assertThat(denied.allowed()).isFalse();
         assertThat(denied.retryAfterMillis()).isGreaterThan(0);
+        assertThat(denied.resetAtEpochSeconds()).isGreaterThan(0);
     }
 
     private static RateLimitRule slidingCounterRule(String name, long maxRequests, long windowMillis) {

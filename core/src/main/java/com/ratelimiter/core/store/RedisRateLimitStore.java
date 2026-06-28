@@ -88,10 +88,10 @@ private RateLimitResult toRateLimitResult(List<Long> result, RateLimitRule rule)
     long remaining = result.get(1);
     long retryAfterMillis = result.get(2);
     long limit = RuleLimitResolver.resolveLimit(rule);
-    long resetAt = retryAfterMillis > 0
-            ? (System.currentTimeMillis() + retryAfterMillis) / 1000
-            : (System.currentTimeMillis() / 1000) + (rule.getWindowMillis() / 1000);
-  return new RateLimitResult(allowed, remaining, retryAfterMillis, limit, resetAt);
+    long resetAt = result.size() >= 4
+            ? result.get(3)
+            : (System.currentTimeMillis() + retryAfterMillis) / 1000;
+    return new RateLimitResult(allowed, remaining, retryAfterMillis, limit, resetAt);
 }
 
 private RateLimitResult handleRedisFailure(RedisConnectionFailureException ex) {

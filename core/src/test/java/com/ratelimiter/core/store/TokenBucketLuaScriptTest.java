@@ -64,11 +64,13 @@ class TokenBucketLuaScriptTest {
         for (int i = 0; i < 5; i++) {
             RateLimitResult result = store.allow("user:alice", rule);
             assertThat(result.allowed()).isTrue();
+            assertThat(result.resetAtEpochSeconds()).isGreaterThan(0);
         }
 
         RateLimitResult denied = store.allow("user:alice", rule);
         assertThat(denied.allowed()).isFalse();
         assertThat(denied.retryAfterMillis()).isGreaterThan(0);
+        assertThat(denied.resetAtEpochSeconds()).isGreaterThan(0);
     }
 
     @Test
