@@ -30,10 +30,12 @@ public class TokenBucketRateLimiter extends AbstractRateLimiter {
     @Override
     public RateLimitResult allow(String key) {
 
+        long limit = (long) capacity;
         long now = System.nanoTime();
 
         if (isKeyLimitExceeded(key)) {
-            return new RateLimitResult(false, 0, 0);
+            long resetAt = (System.currentTimeMillis() / 1000) + 60;
+            return new RateLimitResult(false, 0, 0, limit, resetAt);
         }
 
         BucketState state = (BucketState) store.computeIfAbsent(key, k -> {
@@ -58,13 +60,13 @@ public class TokenBucketRateLimiter extends AbstractRateLimiter {
 
             if (state.tokens >= 1) {
                 state.tokens -= 1;
-                return new RateLimitResult(true,
-                        (long) state.tokens,
-                        0);
+                long resetAt = (System.currentTimeMillis() / 1000) + 60;
+                return new RateLimitResult(true, (long) state.tokens, 0, limit, resetAt);
             }
 
             long retry = (long) ((1 - state.tokens) / refillPerNano) / 1_000_000;
-            return new RateLimitResult(false, 0, retry);
+            long resetAt = (System.currentTimeMillis() + retry) / 1000;
+            return new RateLimitResult(false, 0, retry, limit, resetAt);
         }
     }
 }

@@ -13,6 +13,11 @@ public class DemoController {
         return "OK";
     }
 
+    @GetMapping("/api/data")
+    public String apiData() {
+        return "API OK";
+    }
+
     @RateLimited
     @GetMapping("/aop-test")
     public String aopTest() {

@@ -31,8 +31,11 @@ public class LeakyBucketRateLimiter extends AbstractRateLimiter {
     @Override
     public RateLimitResult allow(String key) {
 
+        long limit = (long) capacity;
+
         if (isKeyLimitExceeded(key)) {
-            return new RateLimitResult(false, 0, 0);
+            long resetAt = (System.currentTimeMillis() / 1000) + 60;
+            return new RateLimitResult(false, 0, 0, limit, resetAt);
         }
 
         long now = System.nanoTime();
@@ -58,15 +61,15 @@ public class LeakyBucketRateLimiter extends AbstractRateLimiter {
 
             if (state.water < capacity) {
                 state.water += 1;
-                return new RateLimitResult(true,
-                        (long) (capacity - state.water),
-                        0);
+                long resetAt = (System.currentTimeMillis() / 1000) + 60;
+                return new RateLimitResult(true, (long) (capacity - state.water), 0, limit, resetAt);
             }
 
             long retryMillis =
                     (long) ((state.water - capacity + 1) / leakPerNano) / 1_000_000;
+            long resetAt = (System.currentTimeMillis() + retryMillis) / 1000;
 
-            return new RateLimitResult(false, 0, retryMillis);
+            return new RateLimitResult(false, 0, retryMillis, limit, resetAt);
         }
     }
 }

@@ -1,125 +1,101 @@
 package com.ratelimiter.core.service;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.java.Log;
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.ratelimiter.core.config.RateLimitProperties;
+import com.ratelimiter.core.dtos.RateLimitDecision;
 import com.ratelimiter.core.dtos.RateLimitResult;
 import com.ratelimiter.core.dtos.RateLimitRule;
-import com.ratelimiter.core.strategy.FixedWindowRateLimiter;
-import com.ratelimiter.core.strategy.LeakyBucketRateLimiter;
-import com.ratelimiter.core.strategy.RateLimiter;
-import com.ratelimiter.core.strategy.SlidingWindowCounterRateLimiter;
-import com.ratelimiter.core.strategy.SlidingWindowLogRateLimiter;
-import com.ratelimiter.core.strategy.TokenBucketRateLimiter;
+import com.ratelimiter.core.identity.ClientIdentity;
+import com.ratelimiter.core.identity.ClientIdentityResolver;
+import com.ratelimiter.core.store.RateLimitKeyBuilder;
+import com.ratelimiter.core.store.RateLimitStore;
+import com.ratelimiter.core.utils.RuleLimitResolver;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 public class RateLimitManager {
 
-    private final Map<String, RateLimiter> limiterMap = new ConcurrentHashMap<>();
+    private final RateLimitStore store;
     private final List<RateLimitRule> rules;
     private final MeterRegistry meterRegistry;
+    private final ClientIdentityResolver identityResolver;
+    private final RuleMatcher ruleMatcher;
 
-    public RateLimitManager(RateLimitProperties properties,
-                            MeterRegistry meterRegistry) {
-
+    public RateLimitManager(
+            RateLimitStore store,
+            RateLimitProperties properties,
+            MeterRegistry meterRegistry,
+            ClientIdentityResolver identityResolver,
+            RuleMatcher ruleMatcher) {
+        this.store = store;
         this.rules = properties.getRules();
         this.meterRegistry = meterRegistry;
-
-        for (RateLimitRule rule : rules) {
-            limiterMap.put(rule.getName(), createLimiter(rule));
-        }
+        this.identityResolver = identityResolver;
+        this.ruleMatcher = ruleMatcher;
     }
 
-    public RateLimitResult evaluate(HttpServletRequest request) {
-
-        String user = Optional.ofNullable(request.getHeader("X-User-Id"))
-                .orElse("anonymous");
-
+    public RateLimitDecision evaluate(HttpServletRequest request) {
+        ClientIdentity identity = identityResolver.resolve(request);
         String endpoint = request.getRequestURI();
 
-        boolean allowed = true;
-        long minRemaining = Long.MAX_VALUE;
-        long maxRetry = 0;
+        long tightestRemaining = Long.MAX_VALUE;
+        long headerLimit = 0;
+        long headerResetAt = 0;
+        RateLimitRule tightestRule = null;
 
         for (RateLimitRule rule : rules) {
-
-            String key = generateKey(rule, user, endpoint);
-
-            RateLimiter limiter = limiterMap.get(rule.getName());
-
-            RateLimitResult result = limiter.allow(key);
-
-            log.info("RateLimit Rule: {}-{}, Key: {}, Result: {}", rule.getName(), rule.getAlgorithm(), key, result);
-
-
-            if (!result.allowed()) {
-                allowed = false;
-                maxRetry = Math.max(maxRetry, result.retryAfterMillis());
-                meterRegistry.counter("rate_limit.rejected",
-                        "rule", rule.getName()).increment();
+            if (!ruleMatcher.applies(rule, identity, endpoint)) {
+                continue;
             }
 
-            minRemaining = Math.min(minRemaining, result.remainingTokens());
+            String scopeKey = RateLimitKeyBuilder.scopeKey(rule, identity, endpoint);
+            RateLimitResult result = store.allow(scopeKey, rule);
+
+            long ruleLimit = result.limit() > 0
+                    ? result.limit()
+                    : RuleLimitResolver.resolveLimit(rule);
+            long resetAt = result.resetAtEpochSeconds() > 0
+                    ? result.resetAtEpochSeconds()
+                    : fallbackResetAt(result.retryAfterMillis());
+
+            log.info("RateLimit Rule: {}-{}, Identity: {}, Key: {}, Result: {}",
+                    rule.getName(), rule.getAlgorithm(), identity, scopeKey, result);
+
+            if (!result.allowed()) {
+                meterRegistry.counter("rate_limit.rejected", "rule", rule.getName()).increment();
+                return RateLimitDecision.denied(
+                        rule.getName(),
+                        ruleLimit,
+                        result.remaining(),
+                        resetAt,
+                        result.retryAfterMillis());
+            }
+
+            if (result.remaining() < tightestRemaining) {
+                tightestRemaining = result.remaining();
+                headerLimit = ruleLimit;
+                headerResetAt = resetAt;
+                tightestRule = rule;
+            }
         }
 
-        return new RateLimitResult(allowed, minRemaining, maxRetry);
+        if (tightestRemaining == Long.MAX_VALUE) {
+            return RateLimitDecision.allowed(0, 0, 0);
+        }
+
+        return RateLimitDecision.allowed(headerLimit, tightestRemaining, headerResetAt);
     }
 
-    private String generateKey(RateLimitRule rule,
-                               String user,
-                               String endpoint) {
-
-        return switch (rule.getScope()) {
-            case GLOBAL -> "global";
-            case USER -> "user:" + user;
-            case ENDPOINT -> "endpoint:" + endpoint;
-            case USER_ENDPOINT -> "user:" + user + ":endpoint:" + endpoint;
-        };
-    }
-
-    private RateLimiter createLimiter(RateLimitRule rule) {
-
-        return switch (rule.getAlgorithm().toLowerCase()) {
-            case "fixed" ->
-                    new FixedWindowRateLimiter(
-                            rule.getMaxRequests(),
-                            rule.getWindowMillis(),
-                            64, 10000, 60000);
-
-            case "sliding-log" ->
-                    new SlidingWindowLogRateLimiter(
-                            rule.getMaxRequests(),
-                            rule.getWindowMillis(),
-                            64, 10000, 60000, 1000);
-
-            case "sliding-counter" ->
-                    new SlidingWindowCounterRateLimiter(
-                            rule.getMaxRequests(),
-                            rule.getWindowMillis(),
-                            64, 10000, 60000);
-
-            case "token" ->
-                    new TokenBucketRateLimiter(
-                            rule.getCapacity(),
-                            rule.getRefillPerSecond(),
-                            64, 10000, 60000);
-
-            case "leaky" ->
-                    new LeakyBucketRateLimiter(
-                            rule.getCapacity(),
-                            rule.getRefillPerSecond(),
-                            64, 10000, 60000);
-
-            default -> throw new IllegalArgumentException("Unknown algorithm");
-        };
+    private static long fallbackResetAt(long retryAfterMillis) {
+        return retryAfterMillis > 0
+                ? (System.currentTimeMillis() + retryAfterMillis) / 1000
+                : (System.currentTimeMillis() / 1000) + 60;
     }
 }

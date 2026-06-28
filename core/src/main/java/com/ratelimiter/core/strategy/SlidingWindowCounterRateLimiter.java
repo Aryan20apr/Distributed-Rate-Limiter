@@ -33,8 +33,11 @@ public class SlidingWindowCounterRateLimiter extends AbstractRateLimiter {
     @Override
     public RateLimitResult allow(String key) {
 
+        long limit = maxRequests;
+
         if (isKeyLimitExceeded(key)) {
-            return new RateLimitResult(false, 0, 0);
+            long resetAt = (System.currentTimeMillis() / 1000) + 60;
+            return new RateLimitResult(false, 0, 0, limit, resetAt);
         }
 
         long now = System.nanoTime();
@@ -67,14 +70,14 @@ public class SlidingWindowCounterRateLimiter extends AbstractRateLimiter {
 
             if (estimated >= maxRequests) {
                 long retryMillis = (windowNanos - elapsed) / 1_000_000;
-                return new RateLimitResult(false, 0, retryMillis);
+                long resetAt = (System.currentTimeMillis() + retryMillis) / 1000;
+                return new RateLimitResult(false, 0, retryMillis, limit, resetAt);
             }
 
             state.currentCount.increment();
 
-            return new RateLimitResult(true,
-                    maxRequests - estimated - 1,
-                    0);
+            long resetAt = (System.currentTimeMillis() / 1000) + 60;
+            return new RateLimitResult(true, maxRequests - estimated - 1, 0, limit, resetAt);
         }
     }
 }
