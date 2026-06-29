@@ -20,4 +20,13 @@ public class RateLimitRule {
 
     /** Defaults to true when omitted in YAML */
     private boolean enabled = true;
+
+    /** Unix epoch seconds when this rule was last written. Not required in create requests. */
+    private long updatedAtEpochMillis;
+
+
+
+
+
+
 }
