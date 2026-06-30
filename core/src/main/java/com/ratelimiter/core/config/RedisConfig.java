@@ -14,10 +14,26 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import com.ratelimiter.core.service.RuleConfigChangeListener;
+import com.ratelimiter.core.repositories.RuleRepository;
+
 @Configuration
 @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
 public class RedisConfig {
-    
+
+    @Bean
+    RedisMessageListenerContainer redisMessageListenerContainer(
+            RedisConnectionFactory connectionFactory,
+            RuleConfigChangeListener listener) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.addMessageListener(
+                listener,
+                new ChannelTopic(RuleRepository.CHANGED_CHANNEL));
+        return container;
+    } 
 
     @Bean
     RedisConnectionFactory redisConnectionFactory(RateLimitProperties properties) {
@@ -39,7 +55,6 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
         return template;
     }
-
 
     @Bean
     RedisScript<List<Long>> tokenBucketScript() {
