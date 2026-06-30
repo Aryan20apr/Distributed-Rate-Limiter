@@ -32,6 +32,11 @@ public class RateLimitFilter implements Filter {
 
         var httpReq = (HttpServletRequest) request;
         var httpRes = (HttpServletResponse) response;
+        String path = httpReq.getRequestURI();
+        if (path.startsWith("/admin/") || path.startsWith("/actuator/")) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         try {
             RateLimitDecision decision = manager.evaluate(httpReq);

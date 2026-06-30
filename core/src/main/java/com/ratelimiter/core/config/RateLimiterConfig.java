@@ -17,6 +17,7 @@ import com.ratelimiter.core.store.InMemoryRateLimitStore;
 import com.ratelimiter.core.store.RateLimitStore;
 import com.ratelimiter.core.store.RateLimiterFactory;
 import com.ratelimiter.core.store.RedisRateLimitStore;
+import com.ratelimiter.core.web.AdminAuthFilter;
 import com.ratelimiter.core.web.RateLimitFilter;
 import com.ratelimiter.core.web.RateLimitResponseWriter;
 
@@ -30,6 +31,16 @@ public class RateLimiterConfig {
     @ConditionalOnMissingBean(MeterRegistry.class)
     public MeterRegistry meterRegistry() {
         return new SimpleMeterRegistry();
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
+    public FilterRegistrationBean<AdminAuthFilter> adminAuthFilter(AdminAuthFilter filter) {
+        FilterRegistrationBean<AdminAuthFilter> bean = new FilterRegistrationBean<>();
+        bean.setFilter(filter);
+        bean.addUrlPatterns("/admin/*");
+        bean.setOrder(0);
+        return bean;
     }
 
     @Bean
