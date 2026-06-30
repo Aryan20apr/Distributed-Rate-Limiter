@@ -58,7 +58,7 @@ public class RateLimiterConfig {
     @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "memory", matchIfMissing = true)
     RateLimitStore inMemoryRateLimitStore(RateLimitProperties properties) {
         validateRules(properties);
-        return new InMemoryRateLimitStore(properties.getRules());
+        return new InMemoryRateLimitStore();
     }
 
     @Bean
