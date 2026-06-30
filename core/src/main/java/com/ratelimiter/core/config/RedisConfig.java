@@ -3,6 +3,7 @@ package com.ratelimiter.core.config;
 import java.time.Duration;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,7 @@ import com.ratelimiter.core.repositories.RuleRepository;
 public class RedisConfig {
 
     @Bean
+    @ConditionalOnBean(RuleConfigChangeListener.class)
     RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
             RuleConfigChangeListener listener) {
