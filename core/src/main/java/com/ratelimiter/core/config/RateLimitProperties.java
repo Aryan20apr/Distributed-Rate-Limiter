@@ -16,6 +16,14 @@ public class RateLimitProperties {
     private List<RateLimitRule> rules = new ArrayList<>();
     private Admin admin = new Admin();
 
+    public Admin getAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(Admin admin) {
+        this.admin = admin;
+    }
+
     public RateLimitStoreType getStore() {
         return store;
     }
