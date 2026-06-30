@@ -95,8 +95,8 @@ public class RateLimitProperties {
     public static class Admin {
         /** Enable admin API and dynamic config. Defaults true when store=redis. */
         private boolean enabled = true;
-        /** Bearer token for /admin/** — must be set in production. */
-        private String token = "dev-admin-token-change";
+        /** Bearer token for /admin/** — set via rate-limit.admin.token or RATE_LIMIT_ADMIN_TOKEN. */
+        private String token;
         /** Optional poll fallback if pub/sub message is missed (0 = disabled). */
         private long pollIntervalMillis = 0;
 
