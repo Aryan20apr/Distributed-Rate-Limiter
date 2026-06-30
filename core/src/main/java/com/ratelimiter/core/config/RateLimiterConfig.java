@@ -72,7 +72,6 @@ public class RateLimiterConfig {
     }
 
     private static void validateRedisRules(RateLimitProperties properties) {
-        validateRules(properties);
         for (RateLimitRule rule : properties.getRules()) {
             if (!RateLimiterFactory.isRedisSupported(rule.getAlgorithm())) {
                 throw new IllegalStateException(
