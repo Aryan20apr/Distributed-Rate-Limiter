@@ -111,7 +111,7 @@ sequenceDiagram
     Redis-->>Inst2: user-limit
     Inst1->>Redis: reload rule
     Inst2->>Redis: reload rule
-    Note over Inst1,Inst2: RuleCatalog updated; next request uses new limit
+    Note over Inst1, Inst2: RuleCatalog updated. Next request uses new limit
 ```
 
 
