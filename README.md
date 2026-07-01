@@ -148,20 +148,20 @@ rl:global-limit:global
 ## Features
 
 
-|                            |                                                                        |
-| -------------------------- | ---------------------------------------------------------------------- |
-| **Distributed state**      | Redis + atomic Lua scripts                                             |
-| **Dynamic rules**          | Admin REST API, Redis persistence, pub/sub hot reload                  |
-| **Algorithms (Redis)**     | Token bucket, sliding-window counter                                   |
-| **Algorithms (in-memory)** | Fixed window, sliding log, sliding counter, token bucket, leaky bucket |
-| **Scopes**                 | Global, per-user, per-IP, per-API-key, per-endpoint, per-user-endpoint |
-| **Client identity**        | `X-User-Id`, `X-API-Key`, `X-Forwarded-For`, Bearer JWT `sub`          |
-| **Endpoint rules**         | Ant-style patterns (`/api/`**)                                         |
-| **HTTP contract**          | `X-RateLimit-Limit`, `Remaining`, `Reset`; `Retry-After` + JSON on 429 |
-| **Enforcement**            | Servlet filter; optional `@RateLimited` AOP                            |
-| **Failure handling**       | Fail-closed (503) or fail-open when Redis is down                      |
-| **Admin auth**             | Bearer token guard on `/admin/`**                                      |
-| **Path exclusions**        | `/admin/`** and `/actuator/**` bypass rate-limit filter                |
+|                                                   |                                                                        |
+| ------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Distributed state**                             | Redis + atomic Lua scripts                                             |
+| **Dynamic rules**                                 | Admin REST API, Redis persistence, pub/sub hot reload                  |
+| **Algorithms (Redis)**                            | Token bucket, sliding-window counter                                   |
+| **Algorithms (in-memory)**                        | Fixed window, sliding log, sliding counter, token bucket, leaky bucket |
+| **Scopes**                                        | Global, per-user, per-IP, per-API-key, per-endpoint, per-user-endpoint |
+| **Client identity**                               | `X-User-Id`, `X-API-Key`, `X-Forwarded-For`, Bearer JWT `sub`          |
+| **Endpoint rules**                                | Ant-style patterns (`/api/`**)                                         |
+| **HTTP contract**                                 | `X-RateLimit-Limit`, `Remaining`, `Reset`; `Retry-After` + JSON on 429 |
+| **Enforcement**                                   | Servlet filter; optional `@RateLimited` AOP                            |
+| **Failure handling**                              | Fail-closed (503) or fail-open when Redis is down                      |
+| **Admin authDynamic configuration (Redis store)** | Bearer token guard on `/admin/`**                                      |
+| **Path exclusions**                               | `/admin/`** and `/actuator/`** bypass rate-limit filter                |
 
 
 
