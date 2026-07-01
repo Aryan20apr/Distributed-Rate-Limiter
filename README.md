@@ -90,7 +90,7 @@ flowchart TD
 3. **Check** each matching rule against Redis (token bucket or sliding-window counter).
 4. **Respond** with quota headers on success, or a full 429 contract on denial.
 
-All matching rules must pass. On denial, the first failing rule (in config order) determines the response. On success, headers reflect the tightest remaining quota.
+All matching rules must pass. On denial, the first failing rule in **priority order** (lower number first, then alphabetical `name`) determines the response. On success, headers reflect the tightest remaining quota.
 
 ### Dynamic configuration (Redis store)
 
@@ -136,7 +136,7 @@ rl:global-limit:global
 
 | Key / channel       | Type    | Purpose                                        |
 | ------------------- | ------- | ---------------------------------------------- |
-| `rl:config:rules`   | Hash    | Field = rule name, value = JSON rule           |
+| `rl:config:rules`   | Hash    | Field = rule name, value = JSON rule (includes `priority`) |
 | `rl:config:meta`    | Hash    | Bootstrap metadata (`bootstrapped`, `version`) |
 | `rl:config:changed` | Pub/Sub | Notifies all instances to reload               |
 
@@ -152,6 +152,7 @@ rl:global-limit:global
 | ------------------------------------------------- | ---------------------------------------------------------------------- |
 | **Distributed state**                             | Redis + atomic Lua scripts                                             |
 | **Dynamic rules**                                 | Admin REST API, Redis persistence, pub/sub hot reload                  |
+| **Rule priority**                                 | Lower number evaluated first; tie-break by rule name                   |
 | **Algorithms (Redis)**                            | Token bucket, sliding-window counter                                   |
 | **Algorithms (in-memory)**                        | Fixed window, sliding log, sliding counter, token bucket, leaky bucket |
 | **Scopes**                                        | Global, per-user, per-IP, per-API-key, per-endpoint, per-user-endpoint |
@@ -160,7 +161,7 @@ rl:global-limit:global
 | **HTTP contract**                                 | `X-RateLimit-Limit`, `Remaining`, `Reset`; `Retry-After` + JSON on 429 |
 | **Enforcement**                                   | Servlet filter; optional `@RateLimited` AOP                            |
 | **Failure handling**                              | Fail-closed (503) or fail-open when Redis is down                      |
-| **Admin authDynamic configuration (Redis store)** | Bearer token guard on `/admin/`**                                      |
+| **Admin auth**                                  | Bearer token guard on `/admin/**`                                      |
 | **Path exclusions**                               | `/admin/`** and `/actuator/`** bypass rate-limit filter                |
 
 
@@ -169,12 +170,12 @@ rl:global-limit:global
 ### Default rules (Docker profile)
 
 
-| Rule             | Scope   | Limit                                   |
-| ---------------- | ------- | --------------------------------------- |
-| `user-limit`     | User    | 50 req / min                            |
-| `endpoint-limit` | API key | 10 burst, 1/sec refill — `/api/**` only |
-| `ip-limit`       | IP      | 30 req / min                            |
-| `global-limit`   | Global  | 100 burst, 10/sec refill                |
+| Rule             | Priority | Scope   | Limit                                   |
+| ---------------- | -------- | ------- | --------------------------------------- |
+| `user-limit`     | 10       | User    | 50 req / min                            |
+| `endpoint-limit` | 20       | API key | 10 burst, 1/sec refill — `/api/**` only |
+| `ip-limit`       | 30       | IP      | 30 req / min                            |
+| `global-limit`   | 40       | Global  | 100 burst, 10/sec refill                |
 
 
 Defined in `core/src/main/resources/application-docker.yaml`. Seeded into Redis on first start; thereafter managed via the Admin API or direct Redis edits.
@@ -225,6 +226,8 @@ Content-Type: application/json
 {"error":"rate_limit_exceeded","message":"Rate limit exceeded for rule 'user-limit'.","retryAfterSeconds":42}
 ```
 
+`user-limit` (priority 10) is evaluated before `global-limit` (priority 40), so the denial names the user rule.
+
 
 
 ### API key (scoped to `/api/**`)
@@ -251,16 +254,18 @@ curl -si http://localhost/test | head -15
 
 The Docker Compose profile sets `RATE_LIMIT_ADMIN_TOKEN` to `rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1`. All admin requests require `Authorization: Bearer <token>`.
 
-```bash
-# list rules
-curl -s -H "Authorization: Bearer rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1" \
-  http://localhost/admin/rules | jq
+Rules are evaluated in ascending `priority` order (10 before 20). `GET /admin/rules` returns rules in that order.
 
-# tighten user-limit to 5 requests per minute
+```bash
+# list rules (sorted by priority, then name)
+curl -s -H "Authorization: Bearer rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1" \
+  http://localhost/admin/rules | jq '.[] | {name, priority, scope, maxRequests, capacity}'
+
+# tighten user-limit to 5 requests per minute (priority 10 preserved)
 curl -s -X PUT \
   -H "Authorization: Bearer rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1" \
   -H "Content-Type: application/json" \
-  -d '{"scope":"USER","algorithm":"sliding-counter","maxRequests":5,"windowMillis":60000,"enabled":true}' \
+  -d '{"scope":"USER","algorithm":"sliding-counter","maxRequests":5,"windowMillis":60000,"enabled":true,"priority":10}' \
   http://localhost/admin/rules/user-limit | jq
 
 # verify enforcement picks up the new limit (both replicas via nginx)
@@ -269,7 +274,35 @@ docker compose exec -T redis redis-cli EVAL \
 for i in $(seq 1 7); do
   curl -s -o /dev/null -w "hit %{http_code}\n" -H "X-User-Id: demo-user" http://localhost/test
 done
-# Expect 200 for hits 1–5, then 429
+# Expect 200 for hits 1–5, then 429 from user-limit (priority 10, evaluated before global-limit)
+```
+
+### Change rule priority
+
+Lower `priority` values are evaluated first. Omit `priority` or send `0` on update to keep the existing value; on create, `0` auto-assigns the next slot (`max + 10`).
+
+```bash
+# move ip-limit ahead of user-limit (5 before 10)
+curl -s -X PUT \
+  -H "Authorization: Bearer rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1" \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"IP","algorithm":"sliding-counter","maxRequests":30,"windowMillis":60000,"enabled":true,"priority":5}' \
+  http://localhost/admin/rules/ip-limit | jq '.priority'
+# Expect: 5
+
+# create a stricter user rule that runs before user-limit
+curl -s -X POST \
+  -H "Authorization: Bearer rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"strict-user","scope":"USER","algorithm":"sliding-counter","maxRequests":3,"windowMillis":60000,"enabled":true,"priority":5}' \
+  http://localhost/admin/rules | jq '{name, priority, maxRequests}'
+
+docker compose exec -T redis redis-cli EVAL \
+  "local n=0 for _,k in ipairs(redis.call('KEYS','rl:*')) do if not string.match(k,'^rl:config:') then redis.call('DEL',k) n=n+1 end end return n" 0
+for i in $(seq 1 5); do
+  curl -s -o /dev/null -w "hit %{http_code}\n" -H "X-User-Id: demo-user" http://localhost/test
+done
+# Expect 200 for hits 1–3, then 429 citing strict-user (priority 5, before user-limit at 10)
 ```
 
 Admin API surface:
@@ -323,6 +356,7 @@ rate-limit:
     timeout-millis: 50
   rules:
     - name: user-limit
+      priority: 10          # lower number = evaluated first
       scope: USER
       algorithm: sliding-counter
       maxRequests: 50
