@@ -11,6 +11,7 @@ import com.ratelimiter.core.dtos.RateLimitRule;
 import com.ratelimiter.core.repositories.RuleRepository;
 import com.ratelimiter.core.utils.RuleConflictException;
 import com.ratelimiter.core.utils.RuleNotFoundException;
+import com.ratelimiter.core.utils.RuleOrdering;
 import com.ratelimiter.core.utils.RuleValidator;
 
 @Service
@@ -43,6 +44,9 @@ public class RuleConfigService {
         if (repository.findByName(rule.getName()).isPresent()) {
             throw new RuleConflictException("Rule already exists: " + rule.getName());
         }
+        if (RuleOrdering.isUnset(rule.getPriority())) {
+            rule.setPriority(RuleOrdering.nextPriority(repository.findAll()));
+        }
         validate(rule);
         stamp(rule);
         repository.save(rule);
@@ -53,10 +57,13 @@ public class RuleConfigService {
     }
 
     public RateLimitRule updateRule(String name, RateLimitRule rule) {
-        if (!repository.findByName(name).isPresent()) {
-            throw new RuleNotFoundException(name);
-        }
+        RateLimitRule existing = repository.findByName(name)
+                .orElseThrow(() -> new RuleNotFoundException(name));
         rule.setName(name);
+        // If the priority is not supplied or 0, use the existing priority for update
+        if (RuleOrdering.isUnset(rule.getPriority())) {
+            rule.setPriority(existing.getPriority());
+        }
         validate(rule);
         stamp(rule);
         repository.save(rule);
