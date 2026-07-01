@@ -1,6 +1,5 @@
 package com.ratelimiter.core.service;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -9,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.ratelimiter.core.dtos.RateLimitRule;
 import com.ratelimiter.core.repositories.RuleRepository;
+import com.ratelimiter.core.utils.RuleOrdering;
 
 class InMemoryRuleRepository implements RuleRepository {
 
@@ -23,9 +23,7 @@ class InMemoryRuleRepository implements RuleRepository {
 
     @Override
     public List<RateLimitRule> findAll() {
-        return rules.values().stream()
-                .sorted(Comparator.comparing(RateLimitRule::getName))
-                .toList();
+        return RuleOrdering.sorted(List.copyOf(rules.values()));
     }
 
     @Override

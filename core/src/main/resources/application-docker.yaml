@@ -9,12 +9,14 @@ rate-limit:
     timeout-millis: 50
   rules:
     - name: user-limit
+      priority: 10
       scope: USER
       algorithm: sliding-counter
       maxRequests: 50
       windowMillis: 60000
 
     - name: endpoint-limit
+      priority: 20
       scope: API_KEY
       algorithm: token
       capacity: 10
@@ -22,11 +24,13 @@ rate-limit:
       endpointPattern: /api/**
 
     - name: ip-limit
+      priority: 30
       scope: IP
       algorithm: sliding-counter
       maxRequests: 30
       windowMillis: 60000
     - name: global-limit
+      priority: 40
       scope: GLOBAL
       algorithm: token
       capacity: 100

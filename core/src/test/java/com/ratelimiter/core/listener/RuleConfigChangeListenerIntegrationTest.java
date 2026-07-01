@@ -75,6 +75,7 @@ class RuleConfigChangeListenerIntegrationTest {
         rule.setAlgorithm("token");
         rule.setCapacity(10);
         rule.setRefillPerSecond(1.0);
+        rule.setPriority(10);
         return rule;
     }
 }

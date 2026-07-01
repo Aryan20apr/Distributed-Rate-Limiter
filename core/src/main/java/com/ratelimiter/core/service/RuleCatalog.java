@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.stereotype.Component;
 
 import com.ratelimiter.core.dtos.RateLimitRule;
+import com.ratelimiter.core.utils.RuleOrdering;
 
 @Component
 public class RuleCatalog {
@@ -18,7 +19,7 @@ public class RuleCatalog {
     }
 
     public void replaceAll(List<RateLimitRule> newRules) {
-        rules.set(List.copyOf(newRules));
+        rules.set(RuleOrdering.sorted(newRules));
     }
 
     public void clear() {

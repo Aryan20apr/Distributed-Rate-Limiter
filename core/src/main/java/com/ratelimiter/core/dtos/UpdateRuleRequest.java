@@ -21,6 +21,8 @@ public class UpdateRuleRequest {
     private double capacity;
     private String endpointPattern;
     private boolean enabled = true;
+    /** 0 means unset; existing priority is preserved on update. */
+    private int priority;
 
     public RateLimitRule toRule(String name) {
         RateLimitRule rule = new RateLimitRule();
@@ -33,6 +35,7 @@ public class UpdateRuleRequest {
         rule.setCapacity(capacity);
         rule.setEndpointPattern(endpointPattern);
         rule.setEnabled(enabled);
+        rule.setPriority(priority);
         return rule;
     }
 }

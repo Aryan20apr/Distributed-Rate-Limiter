@@ -49,6 +49,9 @@ public final class RuleValidator {
         if (rule.getAlgorithm() == null || rule.getAlgorithm().isBlank()) {
             errors.put("algorithm", "algorithm is required");
         }
+        if (rule.getPriority() < 0) {
+            errors.put("priority", "priority must be >= 0");
+        }
         if (rule.getScope() == RateLimitScope.API_KEY
                 && rule.getEndpointPattern() == null) {
             // optional warning only — API_KEY without pattern applies everywhere

@@ -24,6 +24,7 @@ public class CreateRuleRequest {
     private double capacity;
     private String endpointPattern;
     private boolean enabled = true;
+    private int priority;
 
     public RateLimitRule toRule() {
         RateLimitRule rule = new RateLimitRule();
@@ -36,6 +37,7 @@ public class CreateRuleRequest {
         rule.setCapacity(capacity);
         rule.setEndpointPattern(endpointPattern);
         rule.setEnabled(enabled);
+        rule.setPriority(priority);
         return rule;
     }
 }

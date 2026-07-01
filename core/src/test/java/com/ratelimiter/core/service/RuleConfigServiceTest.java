@@ -26,6 +26,33 @@ class RuleConfigServiceTest {
     }
 
     @Test
+    void createRuleAutoAssignsPriorityWhenUnset() {
+        RateLimitRule created = service.createRule(validTokenRule("my-rule"));
+
+        assertThat(created.getPriority()).isEqualTo(10);
+    }
+
+    @Test
+    void createRuleIncrementsPriorityForSubsequentRules() {
+        service.createRule(validTokenRule("first-rule"));
+        RateLimitRule second = service.createRule(validTokenRule("second-rule"));
+
+        assertThat(second.getPriority()).isEqualTo(20);
+    }
+
+    @Test
+    void updateRulePreservesPriorityWhenUnset() {
+        RateLimitRule created = service.createRule(validTokenRule("keep-priority"));
+        int originalPriority = created.getPriority();
+
+        RateLimitRule update = validTokenRule("keep-priority");
+        update.setCapacity(20);
+        RateLimitRule updated = service.updateRule("keep-priority", update);
+
+        assertThat(updated.getPriority()).isEqualTo(originalPriority);
+    }
+
+    @Test
     void createRuleSavesReloadsCatalogAndPublishes() {
         RateLimitRule created = service.createRule(validTokenRule("my-rule"));
 
@@ -67,6 +94,7 @@ class RuleConfigServiceTest {
         rule.setAlgorithm("token");
         rule.setCapacity(10);
         rule.setRefillPerSecond(1.0);
+        rule.setPriority(0);
         return rule;
     }
 }
