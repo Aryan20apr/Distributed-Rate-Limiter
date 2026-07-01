@@ -35,13 +35,14 @@ public class RateLimiterConfig {
 
     @Bean
     @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
-    public FilterRegistrationBean<AdminAuthFilter> adminAuthFilter(AdminAuthFilter filter) {
-        FilterRegistrationBean<AdminAuthFilter> bean = new FilterRegistrationBean<>();
-        bean.setFilter(filter);
-        bean.addUrlPatterns("/admin/*");
-        bean.setOrder(0);
-        return bean;
-    }
+    public FilterRegistrationBean<AdminAuthFilter> adminAuthFilterRegistration(
+        RateLimitProperties properties, ObjectMapper objectMapper) {
+    FilterRegistrationBean<AdminAuthFilter> bean = new FilterRegistrationBean<>();
+    bean.setFilter(new AdminAuthFilter(properties, objectMapper));
+    bean.addUrlPatterns("/admin/*");
+    bean.setOrder(0);
+    return bean;
+}
 
     @Bean
     public FilterRegistrationBean<RateLimitFilter> rateLimitFilter(

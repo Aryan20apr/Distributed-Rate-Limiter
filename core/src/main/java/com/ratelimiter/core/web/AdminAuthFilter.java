@@ -3,10 +3,8 @@ package com.ratelimiter.core.web;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,8 +16,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@Component
-@ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
 public class AdminAuthFilter extends OncePerRequestFilter {
 
     private static final String HEADER_AUTHORIZATION = "Authorization";
