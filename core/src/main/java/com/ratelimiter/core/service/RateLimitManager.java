@@ -23,19 +23,21 @@ import lombok.extern.slf4j.Slf4j;
 public class RateLimitManager {
 
     private final RateLimitStore store;
-    private final List<RateLimitRule> rules;
+    // private final List<RateLimitRule> rules;
     private final MeterRegistry meterRegistry;
     private final ClientIdentityResolver identityResolver;
     private final RuleMatcher ruleMatcher;
+    private final RuleCatalog ruleCatalog;
 
     public RateLimitManager(
             RateLimitStore store,
             RateLimitProperties properties,
             MeterRegistry meterRegistry,
             ClientIdentityResolver identityResolver,
+            RuleCatalog ruleCatalog,
             RuleMatcher ruleMatcher) {
         this.store = store;
-        this.rules = properties.getRules();
+        this.ruleCatalog = ruleCatalog;
         this.meterRegistry = meterRegistry;
         this.identityResolver = identityResolver;
         this.ruleMatcher = ruleMatcher;
@@ -50,7 +52,7 @@ public class RateLimitManager {
         long headerResetAt = 0;
         RateLimitRule tightestRule = null;
 
-        for (RateLimitRule rule : rules) {
+        for (RateLimitRule rule : ruleCatalog.getRules()) {
             if (!ruleMatcher.applies(rule, identity, endpoint)) {
                 continue;
             }

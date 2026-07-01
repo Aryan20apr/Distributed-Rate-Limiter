@@ -17,6 +17,7 @@ import com.ratelimiter.core.store.InMemoryRateLimitStore;
 import com.ratelimiter.core.store.RateLimitStore;
 import com.ratelimiter.core.store.RateLimiterFactory;
 import com.ratelimiter.core.store.RedisRateLimitStore;
+import com.ratelimiter.core.web.AdminAuthFilter;
 import com.ratelimiter.core.web.RateLimitFilter;
 import com.ratelimiter.core.web.RateLimitResponseWriter;
 
@@ -33,6 +34,17 @@ public class RateLimiterConfig {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
+    public FilterRegistrationBean<AdminAuthFilter> adminAuthFilterRegistration(
+        RateLimitProperties properties, ObjectMapper objectMapper) {
+    FilterRegistrationBean<AdminAuthFilter> bean = new FilterRegistrationBean<>();
+    bean.setFilter(new AdminAuthFilter(properties, objectMapper));
+    bean.addUrlPatterns("/admin/*");
+    bean.setOrder(0);
+    return bean;
+}
+
+    @Bean
     public FilterRegistrationBean<RateLimitFilter> rateLimitFilter(
             RateLimitManager manager,
             RateLimitResponseWriter responseWriter) {
@@ -47,7 +59,7 @@ public class RateLimiterConfig {
     @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "memory", matchIfMissing = true)
     RateLimitStore inMemoryRateLimitStore(RateLimitProperties properties) {
         validateRules(properties);
-        return new InMemoryRateLimitStore(properties.getRules());
+        return new InMemoryRateLimitStore();
     }
 
     @Bean
@@ -72,7 +84,6 @@ public class RateLimiterConfig {
     }
 
     private static void validateRedisRules(RateLimitProperties properties) {
-        validateRules(properties);
         for (RateLimitRule rule : properties.getRules()) {
             if (!RateLimiterFactory.isRedisSupported(rule.getAlgorithm())) {
                 throw new IllegalStateException(

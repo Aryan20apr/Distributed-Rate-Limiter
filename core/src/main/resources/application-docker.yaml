@@ -1,6 +1,8 @@
 rate-limit:
   store: redis
   failure-mode: closed
+  admin:
+    token: ${RATE_LIMIT_ADMIN_TOKEN:rl-admin-7f3a9c2e8b1d4f6a9e0c3b5d7f2a8e1}
   redis:
     host: redis
     port: 6379
