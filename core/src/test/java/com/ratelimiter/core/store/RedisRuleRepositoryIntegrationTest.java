@@ -59,9 +59,12 @@ class RedisRuleRepositoryIntegrationTest {
     }
 
     @Test
-    void findAllReturnsSortedList() {
-        repository.save(sampleRule("zebra-rule"));
-        repository.save(sampleRule("alpha-rule"));
+    void findAllReturnsPriorityOrder() {
+        RateLimitRule zebra = sampleRule("zebra-rule", 20);
+        RateLimitRule alpha = sampleRule("alpha-rule", 10);
+
+        repository.save(zebra);
+        repository.save(alpha);
 
         List<RateLimitRule> rules = repository.findAll();
 
@@ -88,12 +91,17 @@ class RedisRuleRepositoryIntegrationTest {
     }
 
     private static RateLimitRule sampleRule(String name) {
+        return sampleRule(name, 10);
+    }
+
+    private static RateLimitRule sampleRule(String name, int priority) {
         RateLimitRule rule = new RateLimitRule();
         rule.setName(name);
         rule.setScope(RateLimitScope.USER);
         rule.setAlgorithm("token");
         rule.setCapacity(10);
         rule.setRefillPerSecond(1.0);
+        rule.setPriority(priority);
         return rule;
     }
 }
