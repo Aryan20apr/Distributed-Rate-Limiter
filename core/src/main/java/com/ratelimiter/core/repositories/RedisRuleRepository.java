@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ratelimiter.core.dtos.RateLimitRule;
 import com.ratelimiter.core.utils.RateLimitStoreException;
+import com.ratelimiter.core.utils.RuleOrdering;
 
 @Repository
 @ConditionalOnProperty(prefix = "rate-limit", name = "store", havingValue = "redis")
@@ -39,8 +40,7 @@ public class RedisRuleRepository implements RuleRepository {
         for (Object value : entries.values()) {
             rules.add(deserialize((String) value));
         }
-        rules.sort((a, b) -> a.getName().compareTo(b.getName()));
-        return rules;
+        return RuleOrdering.sorted(rules);
     }
 
     @Override

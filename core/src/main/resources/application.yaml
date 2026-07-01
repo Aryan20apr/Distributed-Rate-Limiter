@@ -7,24 +7,28 @@ rate-limit:
   rules:
     # used for first-start bootstrap only when Redis config is empty
     - name: global-limit
+      priority: 10
       scope: GLOBAL
       algorithm: token
       capacity: 20
       refillPerSecond: 10
 
     - name: user-limit
+      priority: 20
       scope: USER
       algorithm: sliding-counter
       maxRequests: 10
       windowMillis: 60000
 
     - name: endpoint-limit
+      priority: 30
       scope: ENDPOINT
       algorithm: fixed
       maxRequests: 5
       windowMillis: 10000
 
     - name: user-endpoint-limit
+      priority: 40
       scope: USER_ENDPOINT
       algorithm: sliding-log
       maxRequests: 3
